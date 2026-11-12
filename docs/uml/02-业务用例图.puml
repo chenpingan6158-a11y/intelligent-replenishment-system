@@ -1,0 +1,38 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam usecaseFontSize 13
+left to right direction
+actor "门店店长" as SM
+actor "门店员工" as SC
+actor "区域经理" as RM
+actor "总部供应链计划员" as HQ
+actor "中央厨房" as WH
+actor "系统管理员" as AD
+
+rectangle 连锁餐饮订货与库存业务 {
+  usecase "门店订货管理" as UC1
+  usecase "智能补货决策" as UC2
+  usecase "门店库存管理" as UC3
+  usecase "配货履约与物流" as UC4
+  usecase "订货审批管控" as UC5
+  usecase "经营监控与预警" as UC6
+  usecase "主数据与策略管理" as UC7
+  usecase "跨店余缺调剂" as UC8
+}
+
+SM --> UC1
+SM --> UC2
+SM --> UC3
+SC --> UC1
+SC --> UC3
+RM --> UC5
+RM --> UC6
+RM --> UC8
+HQ --> UC7
+HQ --> UC6
+WH --> UC4
+AD --> UC7
+AD --> UC6
+UC1 ..> UC2 : 参考
+UC5 ..> UC1 : 约束
+@enduml

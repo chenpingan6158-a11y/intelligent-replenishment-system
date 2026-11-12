@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    container_name: chain-restock
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=change-me-in-production
+    volumes:
+      - app-data:/workspace/data
+    restart: unless-stopped
+
+volumes:
+  app-data:

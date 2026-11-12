@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+actor 店长 as SM
+participant "InventoryRouter" as RT
+participant "InventoryService" as SV
+participant "UnitsService" as UN
+database "数据库" as DB
+
+SM -> RT : POST /api/inventory/outbound\n(商品 8, 1.5 箱)
+RT -> SV : outbound(store_id, items)
+SV -> UN : to_base(product, 1.5, "箱")
+UN --> SV : 15000(g)
+SV -> DB : SELECT 批次 WHERE 余量>0\nORDER BY 效期 ASC(FEFO)
+DB --> SV : 批次列表
+loop 逐批次扣减直至满足
+  alt 当前批次可覆盖剩余量
+    SV -> DB : 批次扣减(乐观锁 version)
+    DB --> SV : 成功
+  else 批次不足
+    SV -> SV : 扣完本批次, 继续下一批次
+  end
+end
+alt 总量不足
+  SV --> RT : HTTPException(库存不足)
+  RT --> SM : 409 拒绝出库
+else 扣减成功
+  SV -> DB : 写入 StockMovement 出库流水\n+ 效期预警复核
+  SV --> RT : 出库明细(各批次扣减量)
+  RT --> SM : 成功
+end
+@enduml

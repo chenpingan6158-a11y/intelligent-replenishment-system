@@ -1,0 +1,148 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+package "边界类（接口层）" {
+  class AuthRouter {
+    +login()
+    +register()
+    +options()
+  }
+  class ReplenishmentRouter {
+    +suggestions()
+    +detail()
+    +backtest()
+  }
+  class OrderRouter {
+    +create()
+    +submit()
+    +approve()
+    +confirm()
+    +receive()
+  }
+  class InventoryRouter {
+    +receive()
+    +outbound()
+    +stocktake()
+    +transfer()
+  }
+  class DashboardRouter {
+    +overview()
+    +alerts()
+  }
+  class MasterRouter {
+    +products()
+    +users()
+    +userStatus()
+  }
+}
+package "控制类（服务层）" {
+  class ForecastEngine {
+    <<static>>
+    +baseline()
+    +weekday_factor()
+    +trend()
+    +predict()
+  }
+  class ReplenishmentService {
+    +suggest()
+    +explain()
+    +backtest()
+  }
+  class OrderingService {
+    +submit()
+    +approve()
+    +reject()
+    +confirm()
+    +receive()
+  }
+  class InventoryService {
+    +receive()
+    +outbound_fefo()
+    +stocktake()
+    +transfer()
+  }
+  class AlertingService {
+    +scan()
+    +handle()
+  }
+  class MetricsService {
+    +overview()
+  }
+  class UnitsService {
+    +to_base()
+    +format()
+  }
+}
+package "实体类（持久层）" {
+  class User {
+    +id
+    +username
+    +role
+    +store_id
+  }
+  class Store {
+    +id
+    +name
+    +region_id
+  }
+  class Product {
+    +id
+    +name
+    +base_unit
+    +moq
+  }
+  class Stock {
+    +qty_base
+    +locked_base
+  }
+  class Batch {
+    +qty_base
+    +expire_date
+  }
+  class StockMovement {
+    +movement_type
+    +qty_base
+  }
+  class SalesDaily {
+    +sales_base
+    +consumed_base
+  }
+  class PurchaseOrder {
+    +order_no
+    +status
+    +total_cents
+  }
+  class OrderItem {
+    +order_qty
+    +received_qty
+  }
+  class Alert {
+    +alert_type
+    +severity
+    +status
+  }
+}
+
+AuthRouter ..> User
+ReplenishmentRouter ..> ReplenishmentService
+OrderRouter ..> OrderingService
+InventoryRouter ..> InventoryService
+DashboardRouter ..> MetricsService
+DashboardRouter ..> AlertingService
+MasterRouter ..> User
+ReplenishmentService ..> ForecastEngine
+ReplenishmentService ..> UnitsService
+OrderingService ..> InventoryService
+OrderingService ..> PurchaseOrder
+OrderingService ..> OrderItem
+InventoryService ..> Stock
+InventoryService ..> Batch
+InventoryService ..> StockMovement
+InventoryService ..> UnitsService
+AlertingService ..> Alert
+MetricsService ..> Stock
+SalesDaily ..> ForecastEngine : 输入
+Store ..> User : 归属
+Product ..> Stock
+Product ..> SalesDaily
+@enduml

@@ -1,0 +1,61 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+class OrderRouter {
+  +POST /orders
+  +POST /orders/{id}/submit
+  +POST /orders/{id}/approve
+  +POST /orders/{id}/reject
+  +POST /orders/{id}/confirm
+  +POST /orders/{id}/receive
+}
+class OrderingService {
+  +create_order(store_id, items) : PurchaseOrder
+  +submit_order(order) : 判定审批规则
+  -_auto_approve(order) : (bool, list[str])
+  +approve_order(order, approver)
+  +reject_order(order, opinion)
+  +confirm_order(order) : 生成在途
+  +receive_order(order, items) : 差异登记+入库
+}
+class "PurchaseOrder" as PO <<entity>> {
+  +order_no +status
+  +total_cents +store_id
+  +approved_by +approved_at
+}
+class "OrderItem" as OI <<entity>> {
+  +product_id +order_qty
+  +suggest_qty +adjust_reason
+  +received_qty
+}
+class ApprovalRule <<strategy>> {
+  +金额阈值 500 元
+  +偏离建议量 > 50%
+  +订后超最大库存
+  +judge(order) : list[str]
+}
+class OrderStateMachine <<enumeration>> {
+  DRAFT → SUBMITTED
+  SUBMITTED → APPROVED / REJECTED
+  APPROVED → CONFIRMED
+  CONFIRMED → RECEIVED
+  RECEIVED → CLOSED / CANCELLED
+}
+class InventoryService {
+  +receive_inbound(items) : 生成批次
+}
+class "Store" as ST
+class "Product" as P
+class "Stock" as SK
+
+OrderRouter ..> OrderingService
+OrderingService ..> PO
+OrderingService ..> OI
+OrderingService ..> ApprovalRule
+OrderingService ..> OrderStateMachine : 约束流转
+OrderingService ..> InventoryService : 收货入库
+PO "1" *-- "1..*" OI
+PO ..> ST : store_id
+OI ..> P : product_id
+P ..> SK : 库存联动
+@enduml

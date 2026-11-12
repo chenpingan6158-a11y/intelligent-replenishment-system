@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>连锁餐饮门店订货与库存智能补货系统</title>
+  <link rel="stylesheet" href="/static/css/app.css?v=20261112e" />
+</head>
+<body>
+  <!-- 登录页 -->
+  <div id="login-view" class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark">补</div>
+        <div>
+          <h1>智能补货系统</h1>
+          <p>连锁餐饮门店订货与库存管理</p>
+        </div>
+      </div>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-tab="login">登 录</button>
+        <button type="button" class="auth-tab" data-tab="register">注 册</button>
+      </div>
+      <form id="login-form" class="login-form">
+        <label>账号<input id="login-username" autocomplete="username" placeholder="请输入账号" value="sm001" /></label>
+        <label>口令<input id="login-password" type="password" autocomplete="current-password" placeholder="请输入口令" value="sm123" /></label>
+        <button type="submit" class="btn btn-primary btn-block">登 录</button>
+        <p id="login-error" class="login-error"></p>
+      </form>
+      <form id="register-form" class="login-form hidden">
+        <label>账号<input id="reg-username" autocomplete="username" placeholder="3-50 个字符" /></label>
+        <label>姓名<input id="reg-fullname" placeholder="例如：张三" /></label>
+        <label>口令<input id="reg-password" type="password" autocomplete="new-password" placeholder="至少 6 位" /></label>
+        <label>角色<select id="reg-role"></select></label>
+        <label id="reg-store-row">所属门店<select id="reg-store"></select></label>
+        <label id="reg-region-row" class="hidden">所属区域<select id="reg-region"></select></label>
+        <button type="submit" class="btn btn-primary btn-block">注册并登录</button>
+        <p id="register-error" class="login-error"></p>
+      </form>
+      <div class="login-hint">
+        <span>演示账号</span>
+        <div class="account-chips">
+          <button class="chip" data-account="sm001|sm123">店长 sm001</button>
+          <button class="chip" data-account="region_east|region123">区域经理</button>
+          <button class="chip" data-account="hq|hq123">总部计划员</button>
+          <button class="chip" data-account="wh|wh123">中央厨房</button>
+        </div>
+      </div>
+    </div>
+    <p class="login-foot">《高级软件工程》项目实践 · 第 30 题</p>
+  </div>
+
+  <!-- 主应用 -->
+  <div id="app-view" class="app hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">补</div>
+        <div class="sidebar-brand-text">
+          <strong>智能补货</strong>
+          <span>Chain Restock</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="nav-item" data-view="dashboard"><i>◫</i><span>经营看板</span></a>
+        <a class="nav-item" data-view="replenish"><i>◈</i><span>智能补货</span></a>
+        <a class="nav-item" data-view="orders"><i>▤</i><span>订货单</span><em id="nav-pending" class="badge hidden"></em></a>
+        <a class="nav-item" data-view="inventory"><i>▦</i><span>库存管理</span></a>
+        <a class="nav-item" data-view="alerts"><i>⚠</i><span>预警中心</span><em id="nav-alerts" class="badge hidden"></em></a>
+        <a class="nav-item" data-view="master"><i>⚙</i><span>基础数据</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-box">
+          <div class="avatar" id="user-avatar">店</div>
+          <div class="user-meta">
+            <strong id="user-name">—</strong>
+            <span id="user-role">—</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-block" id="logout-btn">退出登录</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="page-title">经营看板</h2>
+          <p id="page-sub" class="page-sub"></p>
+        </div>
+        <div class="topbar-actions">
+          <div id="store-switcher" class="store-switcher hidden">
+            <span>门店</span>
+            <select id="store-select"></select>
+          </div>
+          <button class="btn btn-ghost" id="refresh-btn">刷新</button>
+        </div>
+      </header>
+
+      <section id="view-root" class="view-root"></section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <div id="modal-root"></div>
+
+  <script src="/static/js/charts.js?v=20261112e"></script>
+  <script src="/static/js/app.js?v=20261112e"></script>
+</body>
+</html>

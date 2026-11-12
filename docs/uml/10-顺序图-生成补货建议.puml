@@ -1,0 +1,37 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+actor 店长 as SM
+participant "前端页面\n(智能补货视图)" as FE
+participant "ReplenishmentRouter" as RT
+participant "ReplenishmentService" as SV
+participant "ForecastEngine" as FC
+participant "UnitsService" as UN
+database "数据库" as DB
+
+SM -> FE : 打开「智能补货」页
+FE -> RT : GET /api/replenishment/suggestions?store_id=1
+RT -> SV : suggest(store_id)
+SV -> DB : 查询门店商品/库存/在途/策略参数
+DB --> SV : 商品、Stock、Policy 列表
+loop 每个需补货商品
+  SV -> DB : 查询近 120 天日销量(SalesDaily)
+  DB --> SV : 历史序列
+  alt 历史数据 >= 14 天
+    SV -> FC : predict(sales, lead_days)
+    FC --> SV : {基线, 星期因子, 趋势, 预测需求, σ}
+    SV -> FC : safety_stock(σ, lead, 0.95)
+    FC --> SV : 安全库存 SS
+    SV -> FC : rop(forecast, SS)
+    FC --> SV : 补货点 ROP
+  else 冷启动降级
+    SV -> SV : 按安全库存天数经验值兜底
+  end
+  SV -> SV : 建议量 = max(0, ROP-现库存-在途)\n按 MOQ/整箱向上取整
+  SV -> UN : format(product, 建议量)
+  UN --> SV : "11 箱"
+  SV -> DB : 保存建议快照
+end
+SV --> RT : List[Suggestion](含推导明细)
+RT --> FE : JSON 信封响应
+FE --> SM : 展示建议表(可展开推导依据)
+@enduml

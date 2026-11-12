@@ -1,0 +1,44 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+package "表示层（浏览器）" {
+  [原生 JS 单页应用\n6 个业务视图 + Canvas 图表\nhash 路由 + 角色化菜单]
+}
+package "接口层（API Gateway）" {
+  [FastAPI REST 接口\nJWT 认证 / RBAC 角色守卫\n门店与区域数据权限过滤]
+}
+package "业务服务层（Domain Services）" {
+  [units\n单位换算]
+  [inventory\n库存事务/FEFO]
+  [forecast\n需求预测]
+  [replenishment\n补货建议/回测]
+  [ordering\n订货状态机/审批]
+  [alerting\n预警扫描]
+  [metrics\n经营指标]
+}
+package "数据访问层" {
+  [SQLAlchemy ORM\n乐观锁/事务管理]
+}
+database "SQLite\n（可迁移 MySQL）" as DB
+folder "部署" {
+  [Uvicorn ASGI 服务]
+  [Docker / Devcontainer]
+}
+
+[原生 JS 单页应用] --> [FastAPI REST 接口] : HTTPS / JSON
+[FastAPI REST 接口] --> [units]
+[FastAPI REST 接口] --> [inventory]
+[FastAPI REST 接口] --> [replenishment]
+[FastAPI REST 接口] --> [ordering]
+[FastAPI REST 接口] --> [alerting]
+[FastAPI REST 接口] --> [metrics]
+[replenishment] --> [forecast]
+[forecast] --> [units]
+[inventory] --> [units]
+[units] --> [SQLAlchemy ORM]
+[inventory] --> [SQLAlchemy ORM]
+[ordering] --> [SQLAlchemy ORM]
+[SQLAlchemy ORM] --> DB
+[Uvicorn ASGI 服务] ..> [FastAPI REST 接口]
+[Docker / Devcontainer] ..> [Uvicorn ASGI 服务]
+@enduml

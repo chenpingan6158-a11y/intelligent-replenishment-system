@@ -1,0 +1,61 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+class ReplenishmentRouter {
+  +GET /suggestions
+  +GET /{store}/{product}
+  +GET /series
+  +POST /backtest
+}
+class ReplenishmentService {
+  +suggest(store_id, only_needed) : List[Suggestion]
+  -explain(on_hand, in_transit, forecast, ss, rop) : str
+  +backtest(store_id, product_id, days)
+}
+class ForecastEngine <<pure functions>> {
+  +baseline(sales: list[float], window=28) : float
+  +weekday_factor(sales: list[float]) : dict
+  +trend(sales: list[float]) : float
+  +predict(sales, horizon, lead_days) : dict
+  +safety_stock(sigma, lead, service=0.95) : float
+  +rop(forecast, ss) : float
+}
+class UnitsService {
+  +to_base(product, qty, unit) : int
+  +format(product, qty_base) : str
+}
+class "Product" as P {
+  +id +name +base_unit
+  +order_unit +base_per_order_unit
+  +moq +max_stock_base
+}
+class "Stock" as S {
+  +qty_base +locked_base
+  +in_transit_base
+}
+class "SalesDaily" as SD {
+  +date +sales_base +consumed_base
+}
+class "StoreProductPolicy" as POL {
+  +lead_days +service_level
+  +review_days
+}
+class "Suggestion" <<value object>> {
+  +productId +suggestQtyOrder
+  +detail{onHand, inTransit, rop, safetyStock, forecastDemand}
+  +reason
+}
+
+ReplenishmentRouter ..> ReplenishmentService
+ReplenishmentService ..> ForecastEngine
+ReplenishmentService ..> UnitsService
+ReplenishmentService ..> Suggestion : 产出
+ReplenishmentService ..> P : 读取
+ReplenishmentService ..> S : 读取
+ReplenishmentService ..> SD : 历史销量
+ReplenishmentService ..> POL : 策略参数
+ForecastEngine ..> SD : 训练数据
+P "1" -- "0..1" S
+P "1" -- "*" SD
+P "1" -- "0..1" POL
+@enduml

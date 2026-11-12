@@ -1,0 +1,39 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+actor 店长 as SM
+actor 区域经理 as RM
+actor 中央厨房 as WH
+participant "OrderRouter" as RT
+participant "OrderingService" as SV
+participant "ApprovalRule" as AR
+participant "InventoryService" as INV
+database "数据库" as DB
+
+SM -> RT : POST /api/orders(勾选建议)
+RT -> SV : create_order()
+SV -> DB : 校验门店/商品/单位换算
+SV --> RT : PurchaseOrder(DRAFT)
+SM -> RT : POST /orders/{id}/submit
+RT -> SV : submit_order()
+SV -> AR : judge(金额, 偏离度, 最大库存)
+AR --> SV : 命中规则列表
+alt 免审(未命中规则)
+  SV -> SV : 自动通过(APPROVED)
+else 命中人工审批
+  SV -> DB : 状态=SUBMITTED
+  RM -> RT : POST /orders/{id}/approve
+  RT -> SV : approve_order(region_mgr)
+  SV -> DB : 状态=APPROVED(留痕)
+end
+WH -> RT : POST /orders/{id}/confirm
+RT -> SV : confirm_order()
+SV -> DB : 状态=CONFIRMED\n生成在途量
+SM -> RT : POST /orders/{id}/receive
+RT -> SV : receive_order(items)
+SV -> INV : receive_inbound(实收明细)
+INV -> DB : 生成批次/效期/流水
+SV -> SV : 差异登记(应收 vs 实收)
+SV -> DB : 状态=RECEIVED
+SV --> RT : 订单+差异列表
+RT --> SM : 收货结果
+@enduml
