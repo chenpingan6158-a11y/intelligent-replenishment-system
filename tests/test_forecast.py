@@ -49,6 +49,26 @@ class TestWeekdayFactors:
         assert fc.cold_start is True
         assert fc.weekday_factors == [1.0] * 7
 
+    def test_single_day_history_returns_seven_valid_factors(self):
+        history = {TODAY - timedelta(days=1): 800}
+        factors = build_forecast(default_input(history=history)).weekday_factors
+        assert len(factors) == 7
+        assert all(factor > 0 for factor in factors)
+
+    def test_all_zero_consumption_returns_neutral_factors(self):
+        history = {TODAY - timedelta(days=i): 0 for i in range(1, 15)}
+        factors = build_forecast(default_input(history=history)).weekday_factors
+        assert factors == [1.0] * 7
+
+    def test_unaligned_history_endpoints_returns_seven_valid_factors(self):
+        history = {
+            TODAY - timedelta(days=i): 800 + i * 10
+            for i in range(1, 11)
+        }
+        factors = build_forecast(default_input(history=history)).weekday_factors
+        assert len(factors) == 7
+        assert all(factor > 0 for factor in factors)
+
 
 class TestSuggestion:
     def test_zero_stock_suggests_replenishment(self):
