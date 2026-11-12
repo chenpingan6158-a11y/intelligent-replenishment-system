@@ -2,8 +2,8 @@
 skinparam backgroundColor #FFFFFF
 actor 店长 as SM
 participant "InventoryRouter" as RT
-participant "InventoryService" as SV
-participant "UnitsService" as UN
+participant "inventory.py" as SV
+participant "units.py" as UN
 database "数据库" as DB
 
 SM -> RT : POST /api/inventory/outbound\n(商品 8, 1.5 箱)

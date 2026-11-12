@@ -36,41 +36,47 @@ package "边界类（接口层）" {
   }
 }
 package "控制类（服务层）" {
-  class ForecastEngine {
-    <<static>>
-    +baseline()
-    +weekday_factor()
-    +trend()
-    +predict()
-  }
-  class ReplenishmentService {
-    +suggest()
-    +explain()
+  class "forecast.py" as ForecastModule {
+    <<module>>
+    +weekday_factors()
+    +build_forecast()
+    +compute_suggestion()
     +backtest()
   }
+  class ReplenishmentService {
+    +build_suggestion()
+    +suggestions_for_store()
+    +in_transit_base()
+  }
   class OrderingService {
-    +submit()
-    +approve()
-    +reject()
-    +confirm()
-    +receive()
+    +create_order()
+    +submit_order()
+    +approve_order()
+    +reject_order()
+    +confirm_order()
+    +receive_order()
+    +close_order()
   }
   class InventoryService {
     +receive()
-    +outbound_fefo()
-    +stocktake()
+    +outbound()
+    +loss()
+    +create_stocktake()
+    +confirm_stocktake()
     +transfer()
   }
   class AlertingService {
-    +scan()
-    +handle()
+    +scan_store()
+    +scan_all()
+    +handle_alert()
   }
   class MetricsService {
     +overview()
   }
   class UnitsService {
     +to_base()
-    +format()
+    +to_order_unit()
+    +humanize()
   }
 }
 package "实体类（持久层）" {
@@ -130,7 +136,7 @@ InventoryRouter ..> InventoryService
 DashboardRouter ..> MetricsService
 DashboardRouter ..> AlertingService
 MasterRouter ..> User
-ReplenishmentService ..> ForecastEngine
+ReplenishmentService ..> ForecastModule
 ReplenishmentService ..> UnitsService
 OrderingService ..> InventoryService
 OrderingService ..> PurchaseOrder
@@ -141,7 +147,7 @@ InventoryService ..> StockMovement
 InventoryService ..> UnitsService
 AlertingService ..> Alert
 MetricsService ..> Stock
-SalesDaily ..> ForecastEngine : 输入
+SalesDaily ..> ForecastModule : 输入
 Store ..> User : 归属
 Product ..> Stock
 Product ..> SalesDaily

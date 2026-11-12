@@ -1,158 +1,261 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam linetype ortho
-entity "region 区域" as region {
-  * id : int <<PK>>
-  --
-  name : str
+skinparam arrowColor #666666
+hide circle
+package "组织与权限" {
+  entity "region 区域" as t_region {
+    id : int <<PK>>
+    code : varchar(20)
+    name : varchar(60)
+  }
+  entity "store 门店" as t_store {
+    id : int <<PK>>
+    code : varchar(20)
+    name : varchar(80)
+    region_id : int <<FK>>
+    address : varchar(200) ?
+    is_active : bool
+  }
+  entity "app_user 用户" as t_app_user {
+    id : int <<PK>>
+    username : varchar(50)
+    password_hash : varchar(200)
+    full_name : varchar(50)
+    role : varchar(20)
+    store_id : int ? <<FK>>
+    region_id : int ? <<FK>>
+    is_active : bool
+    created_at : datetime
+  }
 }
-entity "store 门店" as store {
-  * id : int <<PK>>
-  --
-  # region_id : int <<FK>>
-  name : str
-  address : str
+package "商品与菜谱" {
+  entity "category 商品分类" as t_category {
+    id : int <<PK>>
+    name : varchar(40)
+  }
+  entity "product 商品" as t_product {
+    id : int <<PK>>
+    sku : varchar(30)
+    name : varchar(80)
+    category_id : int <<FK>>
+    base_unit : varchar(10)
+    order_unit : varchar(10)
+    base_per_order_unit : int
+    shelf_life_days : int
+    storage_type : varchar(20) ?
+    unit_price_cents : int
+    is_active : bool
+  }
+  entity "unit_conversion 单位换算" as t_unit_conversion {
+    id : int <<PK>>
+    product_id : int <<FK>>
+    from_unit : varchar(10)
+    to_unit : varchar(10)
+    factor : int
+  }
+  entity "recipe 菜谱" as t_recipe {
+    id : int <<PK>>
+    code : varchar(30)
+    name : varchar(80)
+    price_cents : int ?
+  }
+  entity "recipe_item 菜谱用料" as t_recipe_item {
+    id : int <<PK>>
+    recipe_id : int <<FK>>
+    product_id : int <<FK>>
+    qty_base : int
+  }
 }
-entity "user 用户" as user {
-  * id : int <<PK>>
-  --
-  username : str <<unique>>
-  password_hash : str
-  full_name : str
-  role : enum
-  # store_id : int <<FK>>
-  # region_id : int <<FK>>
-  is_active : bool
+package "库存与批次" {
+  entity "stock 库存" as t_stock {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    product_id : int <<FK>>
+    qty_base : int
+    locked_base : int
+    version : int
+    updated_at : datetime ?
+  }
+  entity "stock_batch 库存批次" as t_stock_batch {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    product_id : int <<FK>>
+    batch_no : varchar(40)
+    production_date : date ?
+    expiry_date : date
+    qty_base : int
+    created_at : datetime
+  }
+  entity "stock_movement 库存流水" as t_stock_movement {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    product_id : int <<FK>>
+    batch_id : int ? <<FK>>
+    movement_type : varchar(20)
+    qty_base : int
+    unit_cost_cents : int ?
+    ref_type : varchar(20) ?
+    ref_no : varchar(40) ?
+    reason_code : varchar(20) ?
+    operator_id : int ? <<FK>>
+    note : varchar(200) ?
+    created_at : datetime
+  }
 }
-entity "category 商品分类" as category {
-  * id : int <<PK>>
-  --
-  name : str
+package "盘点与调拨" {
+  entity "stocktake_order 盘点单" as t_stocktake_order {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    status : varchar(20)
+    created_by : int ? <<FK>>
+    created_at : datetime
+    confirmed_at : datetime ?
+  }
+  entity "stocktake_item 盘点明细" as t_stocktake_item {
+    id : int <<PK>>
+    stocktake_id : int <<FK>>
+    product_id : int <<FK>>
+    book_qty_base : int
+    actual_qty_base : int
+  }
+  entity "transfer_order 调拨单" as t_transfer_order {
+    id : int <<PK>>
+    transfer_no : varchar(30)
+    from_store_id : int <<FK>>
+    to_store_id : int <<FK>>
+    product_id : int <<FK>>
+    qty_base : int
+    status : varchar(20)
+    created_by : int ? <<FK>>
+    created_at : datetime
+  }
 }
-entity "product 商品" as product {
-  * id : int <<PK>>
-  --
-  # category_id : int <<FK>>
-  name : str
-  base_unit : str
-  order_unit : str
-  base_per_order_unit : int
-  moq : int
-  max_stock_base : int
-  shelf_life_days : int
+package "销量与消耗" {
+  entity "sales_daily 日销量" as t_sales_daily {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    biz_date : date
+    recipe_id : int <<FK>>
+    qty : int
+  }
+  entity "consumption_daily 日消耗" as t_consumption_daily {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    biz_date : date
+    product_id : int <<FK>>
+    qty_base : int
+  }
 }
-entity "unit_conversion 单位换算" as uc {
-  * id : int <<PK>>
-  --
-  # product_id : int <<FK>>
-  from_unit : str
-  to_unit : str
-  factor : int
+package "补货策略" {
+  entity "replenishment_policy 补货策略" as t_replenishment_policy {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    product_id : int <<FK>>
+    lead_time_days : int
+    order_cycle_days : int
+    moq_base : int
+    pack_multiple_base : int
+    max_stock_base : int
+    service_level_z : int
+    is_enabled : bool
+  }
 }
-entity "recipe BOM 菜谱" as recipe {
-  * id : int <<PK>>
-  --
-  dish_name : str
-  # product_id : int <<FK>>
-  qty_base : int
+package "订货与审批" {
+  entity "purchase_order 订货单" as t_purchase_order {
+    id : int <<PK>>
+    order_no : varchar(30)
+    store_id : int <<FK>>
+    status : varchar(20)
+    total_cents : int
+    created_by : int <<FK>>
+    created_at : datetime
+    submitted_at : datetime ?
+    expected_delivery_date : date ?
+    remark : varchar(200) ?
+    version : int
+  }
+  entity "purchase_order_item 订货明细" as t_purchase_order_item {
+    id : int <<PK>>
+    order_id : int <<FK>>
+    product_id : int <<FK>>
+    suggest_qty_base : int
+    order_qty_base : int
+    received_qty_base : int
+    unit_price_cents : int
+    amount_cents : int
+    adjust_reason : varchar(200) ?
+  }
+  entity "approval_record 审批记录" as t_approval_record {
+    id : int <<PK>>
+    order_id : int <<FK>>
+    action : varchar(20)
+    operator_id : int ? <<FK>>
+    opinion : varchar(200) ?
+    created_at : datetime
+  }
 }
-entity "stock 库存" as stock {
-  * id : int <<PK>>
-  --
-  # store_id : int <<FK>>
-  # product_id : int <<FK>>
-  qty_base : int
-  locked_base : int
-  in_transit_base : int
-  version : int <<乐观锁>>
-}
-entity "batch 库存批次" as batch {
-  * id : int <<PK>>
-  --
-  # stock_id : int <<FK>>
-  qty_base : int
-  produced_date : date
-  expire_date : date
-}
-entity "stock_movement 库存流水" as movement {
-  * id : int <<PK>>
-  --
-  # store_id : int <<FK>>
-  # product_id : int <<FK>>
-  movement_type : enum
-  qty_base : int
-  ref_no : str
-  created_at : datetime
-}
-entity "sales_daily 日销售" as sales {
-  * id : int <<PK>>
-  --
-  # store_id : int <<FK>>
-  # product_id : int <<FK>>
-  date : date
-  sales_base : int
-  consumed_base : int
-}
-entity "store_product_policy 补货策略" as policy {
-  * id : int <<PK>>
-  --
-  # store_id : int <<FK>>
-  # product_id : int <<FK>>
-  lead_days : int
-  service_level : float
-  review_days : int
-}
-entity "purchase_order 订货单" as po {
-  * id : int <<PK>>
-  --
-  order_no : str <<unique>>
-  # store_id : int <<FK>>
-  status : enum
-  total_cents : int
-  # approved_by : int <<FK>>
-  remark : str
-}
-entity "order_item 订货明细" as oi {
-  * id : int <<PK>>
-  --
-  # order_id : int <<FK>>
-  # product_id : int <<FK>>
-  order_qty : int
-  suggest_qty : int
-  adjust_reason : str
-  received_qty : int
-}
-entity "alert 预警" as alert {
-  * id : int <<PK>>
-  --
-  # store_id : int <<FK>>
-  # product_id : int <<FK>>
-  alert_type : enum
-  severity : enum
-  status : enum
-  message : str
-  # handled_by : int <<FK>>
+package "预警与审计" {
+  entity "alert 预警" as t_alert {
+    id : int <<PK>>
+    store_id : int <<FK>>
+    product_id : int <<FK>>
+    alert_type : varchar(20)
+    level : varchar(10)
+    message : varchar(200)
+    status : varchar(20)
+    created_at : datetime
+    handled_by : int ? <<FK>>
+    handled_at : datetime ?
+  }
+  entity "operation_log 操作日志" as t_operation_log {
+    id : int <<PK>>
+    user_id : int ? <<FK>>
+    username : varchar(50) ?
+    action : varchar(60)
+    target : varchar(60) ?
+    detail : text ?
+    created_at : datetime
+  }
 }
 
-region ||--o{ store
-store ||--o{ user
-category ||--o{ product
-product ||--o{ uc
-product ||--o{ recipe
-store ||--o{ stock
-product ||--o{ stock
-stock ||--o{ batch
-store ||--o{ movement
-product ||--o{ movement
-store ||--o{ sales
-product ||--o{ sales
-store ||--o{ policy
-product ||--o{ policy
-store ||--o{ po
-po ||--|{ oi
-product ||--o{ oi
-store ||--o{ alert
-product ||--o{ alert
-user |o--o{ po : approved_by
-user |o--o{ alert : handled_by
+t_store ||--o{ t_alert : store_id
+t_product ||--o{ t_alert : product_id
+t_app_user ||--o{ t_alert : handled_by
+t_store ||--o{ t_app_user : store_id
+t_region ||--o{ t_app_user : region_id
+t_purchase_order ||--o{ t_approval_record : order_id
+t_app_user ||--o{ t_approval_record : operator_id
+t_store ||--o{ t_consumption_daily : store_id
+t_product ||--o{ t_consumption_daily : product_id
+t_app_user ||--o{ t_operation_log : user_id
+t_category ||--o{ t_product : category_id
+t_store ||--o{ t_purchase_order : store_id
+t_app_user ||--o{ t_purchase_order : created_by
+t_purchase_order ||--o{ t_purchase_order_item : order_id
+t_product ||--o{ t_purchase_order_item : product_id
+t_recipe ||--o{ t_recipe_item : recipe_id
+t_product ||--o{ t_recipe_item : product_id
+t_store ||--o{ t_replenishment_policy : store_id
+t_product ||--o{ t_replenishment_policy : product_id
+t_store ||--o{ t_sales_daily : store_id
+t_recipe ||--o{ t_sales_daily : recipe_id
+t_store ||--o{ t_stock : store_id
+t_product ||--o{ t_stock : product_id
+t_store ||--o{ t_stock_batch : store_id
+t_product ||--o{ t_stock_batch : product_id
+t_store ||--o{ t_stock_movement : store_id
+t_product ||--o{ t_stock_movement : product_id
+t_stock_batch ||--o{ t_stock_movement : batch_id
+t_app_user ||--o{ t_stock_movement : operator_id
+t_stocktake_order ||--o{ t_stocktake_item : stocktake_id
+t_product ||--o{ t_stocktake_item : product_id
+t_store ||--o{ t_stocktake_order : store_id
+t_app_user ||--o{ t_stocktake_order : created_by
+t_region ||--o{ t_store : region_id
+t_store ||--o{ t_transfer_order : from_store_id
+t_store ||--o{ t_transfer_order : to_store_id
+t_product ||--o{ t_transfer_order : product_id
+t_app_user ||--o{ t_transfer_order : created_by
+t_product ||--o{ t_unit_conversion : product_id
 @enduml

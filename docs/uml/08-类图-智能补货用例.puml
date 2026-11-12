@@ -1,61 +1,127 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam classAttributeIconSize 0
-class ReplenishmentRouter {
-  +GET /suggestions
-  +GET /{store}/{product}
-  +GET /series
-  +POST /backtest
-}
-class ReplenishmentService {
-  +suggest(store_id, only_needed) : List[Suggestion]
-  -explain(on_hand, in_transit, forecast, ss, rop) : str
-  +backtest(store_id, product_id, days)
-}
-class ForecastEngine <<pure functions>> {
-  +baseline(sales: list[float], window=28) : float
-  +weekday_factor(sales: list[float]) : dict
-  +trend(sales: list[float]) : float
-  +predict(sales, horizon, lead_days) : dict
-  +safety_stock(sigma, lead, service=0.95) : float
-  +rop(forecast, ss) : float
-}
-class UnitsService {
-  +to_base(product, qty, unit) : int
-  +format(product, qty_base) : str
-}
-class "Product" as P {
-  +id +name +base_unit
-  +order_unit +base_per_order_unit
-  +moq +max_stock_base
-}
-class "Stock" as S {
-  +qty_base +locked_base
-  +in_transit_base
-}
-class "SalesDaily" as SD {
-  +date +sales_base +consumed_base
-}
-class "StoreProductPolicy" as POL {
-  +lead_days +service_level
-  +review_days
-}
-class "Suggestion" <<value object>> {
-  +productId +suggestQtyOrder
-  +detail{onHand, inTransit, rop, safetyStock, forecastDemand}
-  +reason
+hide empty members
+
+package "边界类（接口层）" {
+  class ReplenishmentRouter {
+    +GET /suggestions
+    +GET /{store_id}/{product_id}
+    +GET /series
+    +POST /backtest
+    +GET /history
+  }
 }
 
-ReplenishmentRouter ..> ReplenishmentService
-ReplenishmentService ..> ForecastEngine
-ReplenishmentService ..> UnitsService
-ReplenishmentService ..> Suggestion : 产出
-ReplenishmentService ..> P : 读取
-ReplenishmentService ..> S : 读取
-ReplenishmentService ..> SD : 历史销量
-ReplenishmentService ..> POL : 策略参数
-ForecastEngine ..> SD : 训练数据
-P "1" -- "0..1" S
-P "1" -- "*" SD
-P "1" -- "0..1" POL
+package "控制类（服务层 · 模块函数）" {
+  class "replenishment.py" as ReplenishmentModule {
+    <<module>>
+    +build_suggestion(db, store_id, product_id) : Suggestion
+    +suggestions_for_store(db, store_id, only_needed) : list
+    +in_transit_base(db, store_id, product_id) : int
+    +history_for(db, store_id, product_id, days) : dict
+    +consumption_series(db, store_id, product_id, days)
+    +refresh_consumption_from_sales(db, store_id, biz_date)
+  }
+  class "forecast.py" as ForecastModule {
+    <<module · 纯函数>>
+    +weekday_factors(history, fallback) : list[float]
+    +build_forecast(inp) : ForecastResult
+    +compute_suggestion(inp) : Suggestion
+    +stockout_days(inp) : int
+    +backtest(history) : dict
+    -_mean() / _stdev() / _slope()
+    -_round_up_to(value, multiple)
+  }
+  class "units.py" as UnitsModule {
+    <<module>>
+    +to_base(db, product, qty, unit) : int
+    +to_order_unit(db, product, qty_base) : float
+    +humanize(db, product, qty_base) : str
+    +get_factor(db, product, from_unit, to_unit) : int
+  }
+}
+
+package "值对象（dataclass）" {
+  class SuggestionInput {
+    +history : dict[date, int]
+    +on_hand : int
+    +locked : int
+    +in_transit : int
+    +lead_time_days : int
+    +order_cycle_days : int
+    +moq_base : int
+    +pack_multiple_base : int
+    +max_stock_base : int
+    +z : float = 1.65
+  }
+  class ForecastResult {
+    +baseline : float
+    +weekday_factors : list[float]
+    +trend : float
+    +daily_forecast : list[float]
+    +mu_lead_time : float
+    +sigma : float
+    +safety_stock : float
+    +rop : float
+    +coverage_demand : float
+    +cold_start : bool
+    +effective_days : int
+  }
+  class Suggestion {
+    +suggest_qty_base : int
+    +available_base : int
+    +detail : dict
+    +reason : str
+    +forecast : ForecastResult
+    +needs_reorder : bool
+  }
+}
+
+package "实体类（持久层）" {
+  class Product {
+    +id
+    +sku
+    +name
+    +base_unit
+    +order_unit
+    +base_per_order_unit
+    +shelf_life_days
+    +unit_price_cents
+  }
+  class Stock {
+    +qty_base
+    +locked_base
+    +version
+  }
+  class ConsumptionDaily {
+    +biz_date
+    +qty_base
+  }
+  class ReplenishmentPolicy {
+    +lead_time_days
+    +order_cycle_days
+    +moq_base
+    +pack_multiple_base
+    +max_stock_base
+    +service_level_z
+    +is_enabled
+  }
+}
+
+ReplenishmentRouter ..> ReplenishmentModule : 调用
+ReplenishmentModule ..> ForecastModule : 传入 SuggestionInput
+ReplenishmentModule ..> UnitsModule : 换算与展示
+ReplenishmentModule ..> Suggestion : 产出
+ForecastModule ..> SuggestionInput : 入参
+ForecastModule ..> ForecastResult : 中间结果
+ForecastModule ..> Suggestion : compute_suggestion 产出
+ReplenishmentModule ..> Product : 读取
+ReplenishmentModule ..> Stock : 读取
+ReplenishmentModule ..> ConsumptionDaily : 历史消耗
+ReplenishmentModule ..> ReplenishmentPolicy : 策略参数
+ForecastModule ..> ForecastResult : 引用
+Product "1" -- "0..1" Stock
+Product "1" -- "*" ConsumptionDaily
+Product "1" -- "0..1" ReplenishmentPolicy
 @enduml

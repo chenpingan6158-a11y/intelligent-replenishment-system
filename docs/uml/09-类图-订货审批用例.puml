@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam classAttributeIconSize 0
+hide empty members
 class OrderRouter {
   +POST /orders
   +POST /orders/{id}/submit
@@ -9,52 +10,76 @@ class OrderRouter {
   +POST /orders/{id}/confirm
   +POST /orders/{id}/receive
 }
-class OrderingService {
-  +create_order(store_id, items) : PurchaseOrder
-  +submit_order(order) : 判定审批规则
-  -_auto_approve(order) : (bool, list[str])
-  +approve_order(order, approver)
-  +reject_order(order, opinion)
-  +confirm_order(order) : 生成在途
-  +receive_order(order, items) : 差异登记+入库
+class "ordering.py" as OrderingModule {
+  <<module>>
+  +create_order(db, store_id, items, user) : PurchaseOrder
+  +submit_order(db, order, user)
+  +requires_approval(db, store_id, items, total_cents) : (bool, list[str])
+  -_deviation_ratio(items) : float
+  +approve_order(db, order, user, opinion)
+  +reject_order(db, order, user, opinion)
+  +confirm_order(db, order, user)
+  +receive_order(db, order, items, user)
+  +close_order(db, order, user)
+  +can_transition(old, new) : bool
+  -_assert_transition(old, new)
 }
-class "PurchaseOrder" as PO <<entity>> {
-  +order_no +status
-  +total_cents +store_id
-  +approved_by +approved_at
+class "inventory.py" as InventoryModule {
+  <<module>>
+  +receive(db, store_id, items, ...) : 生成批次入库
 }
-class "OrderItem" as OI <<entity>> {
-  +product_id +order_qty
-  +suggest_qty +adjust_reason
-  +received_qty
+class ApprovalRules {
+  <<BR-07 规则（requires_approval 内实现）>>
+  1. 金额 > 500 元（APPROVAL_AMOUNT_THRESHOLD_CENTS）
+  2. 偏离建议量 > 50%（APPROVAL_DEVIATION_RATIO）
+  3. 订货量超过 ReplenishmentPolicy.max_stock_base
 }
-class ApprovalRule <<strategy>> {
-  +金额阈值 500 元
-  +偏离建议量 > 50%
-  +订后超最大库存
-  +judge(order) : list[str]
-}
-class OrderStateMachine <<enumeration>> {
+class OrderStatus {
+  <<状态枚举 · can_transition 约束>>
   DRAFT → SUBMITTED
   SUBMITTED → APPROVED / REJECTED
   APPROVED → CONFIRMED
   CONFIRMED → RECEIVED
   RECEIVED → CLOSED / CANCELLED
 }
-class InventoryService {
-  +receive_inbound(items) : 生成批次
+class "PurchaseOrder" as PO <<entity>> {
+  +order_no
+  +status
+  +total_cents
+  +store_id
+  +created_by
+  +submitted_at
+  +expected_delivery_date
+  +version
+}
+class "PurchaseOrderItem" as OI <<entity>> {
+  +suggest_qty_base
+  +order_qty_base
+  +received_qty_base
+  +unit_price_cents
+  +amount_cents
+  +adjust_reason
+}
+class ApprovalRecord <<entity>> {
+  +order_id
+  +action
+  +operator_id
+  +opinion
+  +created_at
 }
 class "Store" as ST
 class "Product" as P
 class "Stock" as SK
 
-OrderRouter ..> OrderingService
-OrderingService ..> PO
-OrderingService ..> OI
-OrderingService ..> ApprovalRule
-OrderingService ..> OrderStateMachine : 约束流转
-OrderingService ..> InventoryService : 收货入库
+OrderRouter ..> OrderingModule
+OrderingModule ..> PO
+OrderingModule ..> OI
+OrderingModule ..> ApprovalRules : requires_approval 判定
+OrderingModule ..> OrderStatus : can_transition 约束流转
+OrderingModule ..> ApprovalRecord : 审批留痕
+OrderingModule ..> InventoryModule : 收货入库
 PO "1" *-- "1..*" OI
+PO "1" -- "*" ApprovalRecord
 PO ..> ST : store_id
 OI ..> P : product_id
 P ..> SK : 库存联动
