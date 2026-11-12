@@ -413,9 +413,9 @@ doc.add_page_break()
 H(1, '5 系统实现')
 H(2, '5.1 开发环境及工具链')
 TABLE(['类别', '工具/组件', '版本与配置'],
-      [['AI 编程助手', TBD + 'AI 工具名称】（如 GitHub Copilot / WorkBuddy 智能体）', TBD + '版本】'],
-       ['IDE', TBD + 'VS Code / GitHub Codespaces】', TBD + '版本】'],
-       ['语言与框架', 'Python + FastAPI + Uvicorn', 'Python 3.13 / FastAPI 0.11x'],
+      [['AI 编程助手', 'WorkBuddy 智能体（AI 对话式开发，负责代码生成、UML 建模与报告撰写）', 'WorkBuddy 桌面版（2026-11）'],
+       ['IDE', 'VS Code', '1.145.2（x64）'],
+       ['语言与框架', 'Python + FastAPI + Uvicorn', 'Python 3.13.14 / FastAPI 0.162.4 / Uvicorn 0.54.0'],
        ['ORM 与数据库', 'SQLAlchemy + SQLite', 'SQLAlchemy 2.x / SQLite 3.x（可迁移 MySQL）'],
        ['前端', '原生 HTML/CSS/JavaScript（无构建依赖）', 'ES2020，Canvas 自绘图表'],
        ['版本管理', 'Git + GitHub', TBD + '仓库地址】'],
